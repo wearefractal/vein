@@ -7,6 +7,7 @@
 
     <link rel="stylesheet" href="stylesheets/styles.css">
     <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="javascripts/scale.fix.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <!--[if lt IE 9]>
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
@@ -15,17 +16,18 @@
   <body>
     <div class="wrapper">
       <header>
-        <h1>Vein</h1>
-        <p>RPC via WebSockets</p>
-
-        <p class="view"><a href="https://github.com/wearefractal/vein">View the Project on GitHub <small>wearefractal/vein</small></a></p>
-
+        <h1 class="header">Vein</h1>
+        <p class="header">RPC via WebSockets</p>
 
         <ul>
-          <li><a href="https://github.com/wearefractal/vein/zipball/master">Download <strong>ZIP File</strong></a></li>
-          <li><a href="https://github.com/wearefractal/vein/tarball/master">Download <strong>TAR Ball</strong></a></li>
-          <li><a href="https://github.com/wearefractal/vein">View On <strong>GitHub</strong></a></li>
+          <li class="download"><a class="buttons" href="https://github.com/wearefractal/vein/zipball/master">Download ZIP</a></li>
+          <li class="download"><a class="buttons" href="https://github.com/wearefractal/vein/tarball/master">Download TAR</a></li>
+          <li><a class="buttons github" href="https://github.com/wearefractal/vein">View On GitHub</a></li>
         </ul>
+
+        <p class="header">This project is maintained by <a class="header name" href="https://github.com/wearefractal">wearefractal</a></p>
+
+
       </header>
       <section>
         <p><img src="https://secure.travis-ci.org/wearefractal/vein.png?branch=master" alt="status"></p>
@@ -43,15 +45,17 @@
 </tr>
 <tr>
 <td>Node Version</td>
-<td>&gt;= 0.4</td>
+<td>&gt;= 0.6</td>
 </tr>
-</table><h2>Example</h2>
+</table><p>Vein uses ES5 features so be sure to include es5shim on your page.</p>
+
+<h2>Example</h2>
 
 <h3>Server</h3>
 
 <div class="highlight"><pre><span class="kd">var</span> <span class="nx">Vein</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'vein'</span><span class="p">);</span>
 <span class="kd">var</span> <span class="nx">server</span> <span class="o">=</span> <span class="nx">http</span><span class="p">.</span><span class="nx">createServer</span><span class="p">().</span><span class="nx">listen</span><span class="p">(</span><span class="mi">8080</span><span class="p">);</span>
-<span class="kd">var</span> <span class="nx">vein</span> <span class="o">=</span> <span class="nx">Vein</span><span class="p">.</span><span class="nx">createServer</span><span class="p">({</span><span class="nx">server</span><span class="o">:</span> <span class="nx">server</span><span class="p">});</span>
+<span class="kd">var</span> <span class="nx">vein</span> <span class="o">=</span> <span class="nx">Vein</span><span class="p">.</span><span class="nx">createServer</span><span class="p">(</span><span class="nx">server</span><span class="p">);</span>
 
 <span class="nx">vein</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="s1">'multiply'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">res</span><span class="p">,</span> <span class="nx">numOne</span><span class="p">,</span> <span class="nx">numTwo</span><span class="p">){</span>
   <span class="nx">res</span><span class="p">.</span><span class="nx">reply</span><span class="p">(</span><span class="nx">numOne</span> <span class="o">*</span> <span class="nx">numTwo</span><span class="p">);</span>
@@ -61,7 +65,7 @@
 <h3>Client</h3>
 
 <div class="highlight"><pre><span class="kd">var</span> <span class="nx">vein</span> <span class="o">=</span> <span class="nx">Vein</span><span class="p">.</span><span class="nx">createClient</span><span class="p">();</span>
-<span class="nx">vein</span><span class="p">.</span><span class="nx">on</span><span class="p">(</span><span class="s1">'ready'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">services</span><span class="p">){</span>
+<span class="nx">vein</span><span class="p">.</span><span class="nx">ready</span><span class="p">(</span><span class="kd">function</span> <span class="p">(</span><span class="nx">services</span><span class="p">){</span>
   <span class="nx">vein</span><span class="p">.</span><span class="nx">multiply</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">num</span><span class="p">){</span>
     <span class="c1">// num === 10</span>
   <span class="p">});</span>
@@ -73,12 +77,11 @@
 <h3>Create</h3>
 
 <pre><code>-- Options --
-server - required, the http server to hook
 resource - change to allow multiple servers on one port (default: "default")
 </code></pre>
 
 <div class="highlight"><pre><span class="kd">var</span> <span class="nx">Vein</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'vein'</span><span class="p">);</span>
-<span class="kd">var</span> <span class="nx">vein</span> <span class="o">=</span> <span class="nx">Vein</span><span class="p">.</span><span class="nx">createServer</span><span class="p">({</span><span class="nx">options</span><span class="p">});</span>
+<span class="kd">var</span> <span class="nx">vein</span> <span class="o">=</span> <span class="nx">Vein</span><span class="p">.</span><span class="nx">createServer</span><span class="p">(</span><span class="nx">httpServer</span><span class="p">,</span> <span class="p">{</span><span class="nx">options</span><span class="p">});</span>
 </pre></div>
 
 <h3>Adding services</h3>
@@ -87,22 +90,6 @@ resource - change to allow multiple servers on one port (default: "default")
 
 <div class="highlight"><pre><span class="nx">vein</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="s1">'getNumber'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">res</span><span class="p">,</span> <span class="nx">name</span><span class="p">,</span> <span class="nx">num</span><span class="p">)</span> <span class="p">{</span>
   <span class="nx">res</span><span class="p">.</span><span class="nx">reply</span><span class="p">(</span><span class="s2">"Hey there "</span> <span class="o">+</span> <span class="nx">name</span> <span class="o">+</span> <span class="s2">" I got your number "</span> <span class="o">+</span> <span class="nx">num</span><span class="p">);</span>
-<span class="p">});</span>
-</pre></div>
-
-<h3>Cookies</h3>
-
-<p>The server can read and write cookies to the client via res.cookie()</p>
-
-<div class="highlight"><pre><span class="nx">vein</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="s1">'login'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">res</span><span class="p">,</span> <span class="nx">username</span><span class="p">,</span> <span class="nx">password</span><span class="p">)</span> <span class="p">{</span>
-  <span class="k">if</span> <span class="p">(</span><span class="nx">res</span><span class="p">.</span><span class="nx">cookie</span><span class="p">(</span><span class="s1">'login'</span><span class="p">))</span> <span class="p">{</span>
-    <span class="nx">res</span><span class="p">.</span><span class="nx">reply</span><span class="p">(</span><span class="kc">false</span><span class="p">,</span> <span class="s1">'You already logged in!'</span><span class="p">);</span>
-  <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">username</span> <span class="o">==</span> <span class="s1">'username'</span> <span class="o">&amp;&amp;</span> <span class="nx">password</span> <span class="o">==</span> <span class="s1">'pass123'</span><span class="p">)</span> <span class="p">{</span>
-    <span class="nx">res</span><span class="p">.</span><span class="nx">cookie</span><span class="p">(</span><span class="s1">'login'</span><span class="p">,</span> <span class="s1">'success'</span><span class="p">);</span>
-    <span class="nx">res</span><span class="p">.</span><span class="nx">reply</span><span class="p">(</span><span class="kc">true</span><span class="p">);</span>
-  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-    <span class="nx">res</span><span class="p">.</span><span class="nx">reply</span><span class="p">(</span><span class="kc">false</span><span class="p">,</span> <span class="s1">'Invalid username or password'</span><span class="p">);</span>
-  <span class="p">}</span>
 <span class="p">});</span>
 </pre></div>
 
@@ -120,6 +107,15 @@ resource - change to allow multiple servers on one port (default: "default")
       <span class="nx">res</span><span class="p">.</span><span class="nx">disconnect</span><span class="p">();</span>
     <span class="p">}</span>
   <span class="p">}</span>
+<span class="p">});</span>
+</pre></div>
+
+<h3>Testing</h3>
+
+<p>Vein supports calling the res object as a function. This makes it easier to integrate vanilla-JS services into vein. The only difference is that you still have to put the callback first (this is to prevent headaches with variable arguments from the client).</p>
+
+<div class="highlight"><pre><span class="nx">vein</span><span class="p">.</span><span class="nx">add</span><span class="p">(</span><span class="s1">'echoUser'</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">res</span><span class="p">,</span> <span class="nx">username</span><span class="p">,</span> <span class="nx">password</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">res</span><span class="p">(</span><span class="nx">username</span><span class="p">,</span> <span class="nx">password</span><span class="p">);</span>
 <span class="p">});</span>
 </pre></div>
 
@@ -153,15 +149,6 @@ resource - change to allow multiple servers on one port (default: "default")
 <div class="highlight"><pre><span class="nx">vein</span><span class="p">.</span><span class="nx">getNumber</span><span class="p">(</span><span class="s1">'john'</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">msg</span><span class="p">)</span> <span class="p">{</span>
   <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">msg</span><span class="p">);</span>
 <span class="p">});</span>
-</pre></div>
-
-<h3>Cookies</h3>
-
-<p>You can read/write cookies by using vein.cookie(). This is just nice sugar.</p>
-
-<div class="highlight"><pre><span class="nx">vein</span><span class="p">.</span><span class="nx">cookie</span><span class="p">(</span><span class="s1">'test'</span><span class="p">,</span> <span class="s1">'hello world'</span><span class="p">);</span> <span class="c1">//write</span>
-<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">vein</span><span class="p">.</span><span class="nx">cookie</span><span class="p">(</span><span class="s1">'test'</span><span class="p">));</span> <span class="c1">//read</span>
-<span class="nx">vein</span><span class="p">.</span><span class="nx">cookie</span><span class="p">(</span><span class="s1">'test'</span><span class="p">,</span> <span class="kc">null</span><span class="p">);</span> <span class="c1">//delete</span>
 </pre></div>
 
 <h3>Close</h3>
@@ -203,11 +190,10 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>
       </section>
       <footer>
-        <p>This project is maintained by <a href="https://github.com/wearefractal">wearefractal</a></p>
-        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+        <p><small>Hosted on <a href="https://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>
       </footer>
     </div>
-    <script src="javascripts/scale.fix.js"></script>
-    
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+		
   </body>
 </html>
