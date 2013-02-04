@@ -2,15 +2,13 @@
 connect = require "connect"
 Vein = require "../../index.js"
 
+# static file server
 app = connect()
 app.use connect.static __dirname
 server = app.listen 8080
 
+# RPC
 vein = Vein.createServer server
-
-vein.use (msg, res, next) ->
-  console.log msg.service
-  next()
 
 vein.add 'add', (res, args...) ->
   result = 0

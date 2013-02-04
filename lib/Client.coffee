@@ -1,5 +1,3 @@
-isBrowser = typeof window isnt 'undefined'
-
 getId = =>
   rand = -> (((1 + Math.random()) * 0x10000000) | 0).toString 16
   return rand()+rand()+rand()
@@ -78,7 +76,4 @@ client =
       @synced = true
       @emit 'ready', @ns('main')._services, @namespaces
 
-if isBrowser
-  window.Vein = createClient: ProtoSock.createClientWrapper client
-else
-  module.exports = client
+module.exports = client
