@@ -1,12 +1,5 @@
 ;(function(){
 
-
-/**
- * hasOwnProperty.
- */
-
-var has = Object.prototype.hasOwnProperty;
-
 /**
  * Require the given path.
  *
@@ -83,10 +76,10 @@ require.resolve = function(path) {
 
   for (var i = 0; i < paths.length; i++) {
     var path = paths[i];
-    if (has.call(require.modules, path)) return path;
+    if (require.modules.hasOwnProperty(path)) return path;
   }
 
-  if (has.call(require.aliases, index)) {
+  if (require.aliases.hasOwnProperty(index)) {
     return require.aliases[index];
   }
 };
@@ -140,7 +133,7 @@ require.register = function(path, definition) {
  */
 
 require.alias = function(from, to) {
-  if (!has.call(require.modules, from)) {
+  if (!require.modules.hasOwnProperty(from)) {
     throw new Error('Failed to alias "' + from + '", it does not exist');
   }
   require.aliases[to] = from;
@@ -202,12 +195,30 @@ require.relative = function(parent) {
    */
 
   localRequire.exists = function(path) {
-    return has.call(require.modules, localRequire.resolve(path));
+    return require.modules.hasOwnProperty(localRequire.resolve(path));
   };
 
   return localRequire;
 };
+require.register("component-indexof/index.js", function(exports, require, module){
+
+var indexOf = [].indexOf;
+
+module.exports = function(arr, obj){
+  if (indexOf) return arr.indexOf(obj);
+  for (var i = 0; i < arr.length; ++i) {
+    if (arr[i] === obj) return i;
+  }
+  return -1;
+};
+});
 require.register("component-emitter/index.js", function(exports, require, module){
+
+/**
+ * Module dependencies.
+ */
+
+var index = require('indexof');
 
 /**
  * Expose `Emitter`.
@@ -294,6 +305,14 @@ Emitter.prototype.off =
 Emitter.prototype.removeListener =
 Emitter.prototype.removeAllListeners = function(event, fn){
   this._callbacks = this._callbacks || {};
+
+  // all
+  if (0 == arguments.length) {
+    this._callbacks = {};
+    return this;
+  }
+
+  // specific event
   var callbacks = this._callbacks[event];
   if (!callbacks) return this;
 
@@ -304,7 +323,7 @@ Emitter.prototype.removeAllListeners = function(event, fn){
   }
 
   // remove specific handler
-  var i = callbacks.indexOf(fn._off || fn);
+  var i = index(callbacks, fn._off || fn);
   if (~i) callbacks.splice(i, 1);
   return this;
 };
@@ -363,7 +382,12 @@ require.register("LearnBoost-engine.io-protocol/lib/index.js", function(exports,
  * Module dependencies.
  */
 
-var keys = require('./keys')
+var keys = require('./keys');
+
+/**
+ * Current protocol version.
+ */
+exports.protocol = 2;
 
 /**
  * Packet types.
@@ -385,7 +409,7 @@ var packetslist = keys(packets);
  * Premade error packet.
  */
 
-var err = { type: 'error', data: 'parser error' }
+var err = { type: 'error', data: 'parser error' };
 
 /**
  * Encodes a packet.
@@ -402,7 +426,7 @@ var err = { type: 'error', data: 'parser error' }
  */
 
 exports.encodePacket = function (packet) {
-  var encoded = packets[packet.type]
+  var encoded = packets[packet.type];
 
   // data fragment is optional
   if (undefined !== packet.data) {
@@ -435,7 +459,7 @@ exports.decodePacket = function (data) {
 
 /**
  * Encodes multiple messages (payload).
- * 
+ *
  *     <length>:data
  *
  * Example:
@@ -451,8 +475,8 @@ exports.encodePayload = function (packets) {
     return '0:';
   }
 
-  var encoded = ''
-    , message
+  var encoded = '';
+  var message;
 
   for (var i = 0, l = packets.length; i < l; i++) {
     message = exports.encodePacket(packets[i]);
@@ -465,37 +489,36 @@ exports.encodePayload = function (packets) {
 /*
  * Decodes data when a payload is maybe expected.
  *
- * @param {String} data
- * @return {Array} packets
+ * @param {String} data, callback method
  * @api public
  */
 
-exports.decodePayload = function (data) {
+exports.decodePayload = function (data, callback) {
+  var packet;
   if (data == '') {
     // parser error - ignoring payload
-    return [err];
+    return callback(err, 0, 1);
   }
 
-  var packets = []
-    , length = ''
-    , n, msg, packet
+  var length = ''
+    , n, msg;
 
   for (var i = 0, l = data.length; i < l; i++) {
-    var chr = data.charAt(i)
+    var chr = data.charAt(i);
 
     if (':' != chr) {
       length += chr;
     } else {
       if ('' == length || (length != (n = Number(length)))) {
         // parser error - ignoring payload
-        return [err];
+        return callback(err, 0, 1);
       }
 
       msg = data.substr(i + 1, n);
 
       if (length != msg.length) {
         // parser error - ignoring payload
-        return [err];
+        return callback(err, 0, 1);
       }
 
       if (msg.length) {
@@ -503,24 +526,24 @@ exports.decodePayload = function (data) {
 
         if (err.type == packet.type && err.data == packet.data) {
           // parser error in individual packet - ignoring payload
-          return [err];
+          return callback(err, 0, 1);
         }
 
-        packets.push(packet);
+        var ret = callback(packet, i + n, l);
+        if (false === ret) return;
       }
 
       // advance cursor
       i += n;
-      length = ''
+      length = '';
     }
   }
 
   if (length != '') {
     // parser error - ignoring payload
-    return [err];
+    return callback(err, 0, 1);
   }
 
-  return packets;
 };
 
 });
@@ -702,7 +725,8 @@ require.register("LearnBoost-engine.io-client/lib/socket.js", function(exports, 
 var util = require('./util')
   , transports = require('./transports')
   , Emitter = require('./emitter')
-  , debug = require('debug')('engine-client:socket');
+  , debug = require('debug')('engine-client:socket')
+  , parser = require('engine.io-parser');
 
 /**
  * Module exports.
@@ -715,6 +739,14 @@ module.exports = Socket;
  */
 
 var global = util.global();
+
+/**
+ * Noop function.
+ *
+ * @api private
+ */
+
+function noop () {};
 
 /**
  * Socket constructor.
@@ -739,6 +771,7 @@ function Socket(uri, opts){
     opts.host = uri.host;
     opts.secure = uri.protocol == 'https' || uri.protocol == 'wss';
     opts.port = uri.port;
+    if (uri.query) opts.query = uri.query;
   }
 
   this.secure = null != opts.secure ? opts.secure :
@@ -756,6 +789,7 @@ function Socket(uri, opts){
        location.port :
        (this.secure ? 443 : 80));
   this.query = opts.query || {};
+  if ('string' == typeof this.query) this.query = util.qsParse(this.query);
   this.upgrade = false !== opts.upgrade;
   this.path = (opts.path || '/engine.io').replace(/\/$/, '') + '/';
   this.forceJSONP = !!opts.forceJSONP;
@@ -765,6 +799,7 @@ function Socket(uri, opts){
   this.transports = opts.transports || ['polling', 'websocket', 'flashsocket'];
   this.readyState = '';
   this.writeBuffer = [];
+  this.callbackBuffer = [];
   this.policyPort = opts.policyPort || 843;
   this.open();
 
@@ -784,7 +819,7 @@ Emitter(Socket.prototype);
  * @api public
  */
 
-Socket.protocol = 1;
+Socket.protocol = parser.protocol; // this is an int
 
 /**
  * Static EventEmitter.
@@ -816,11 +851,15 @@ Socket.parser = require('engine.io-parser');
 Socket.prototype.createTransport = function (name) {
   debug('creating transport "%s"', name);
   var query = clone(this.query);
+
+  // append engine.io protocol identifier
+  query.EIO = parser.protocol;
+
+  // transport name
   query.transport = name;
 
-  if (this.id) {
-    query.sid = this.id;
-  }
+  // session id if we already have one
+  if (this.id) query.sid = this.id;
 
   var transport = new transports[name]({
     hostname: this.hostname,
@@ -881,7 +920,7 @@ Socket.prototype.setTransport = function (transport) {
   // set up transport listeners
   transport
     .on('drain', function () {
-      self.flush();
+      self.onDrain();
     })
     .on('packet', function (packet) {
       self.onPacket(packet);
@@ -1104,6 +1143,41 @@ Socket.prototype.ping = function () {
 };
 
 /**
+ * Called on `drain` event
+ * 
+ * @api private
+ */
+
+ Socket.prototype.onDrain = function() {
+  this.callbacks();
+  this.writeBuffer.splice(0, this.prevBufferLen);
+  this.callbackBuffer.splice(0, this.prevBufferLen);
+  // setting prevBufferLen = 0 is very important
+  // for example, when upgrading, upgrade packet is sent over,
+  // and a nonzero prevBufferLen could cause problems on `drain`
+  this.prevBufferLen = 0;
+  if (this.writeBuffer.length == 0) {
+    this.emit('drain');
+  } else {
+    this.flush();
+  }
+ }
+
+/**
+ * Calls all the callback functions associated with sending packets
+ * 
+ * @api private
+ */
+
+Socket.prototype.callbacks = function() {
+  for (var i = 0; i < this.prevBufferLen; i++) {
+    if (this.callbackBuffer[i]) {
+      this.callbackBuffer[i]();
+    }
+  }
+}
+
+/**
  * Flush write buffers.
  *
  * @api private
@@ -1114,7 +1188,10 @@ Socket.prototype.flush = function () {
     !this.upgrading && this.writeBuffer.length) {
     debug('flushing %d packets in socket', this.writeBuffer.length);
     this.transport.send(this.writeBuffer);
-    this.writeBuffer = [];
+    // keep track of current length of writeBuffer
+    // splice writeBuffer and callbackBuffer on `drain`
+    this.prevBufferLen = this.writeBuffer.length;
+    this.emit('flush');
   }
 };
 
@@ -1122,13 +1199,14 @@ Socket.prototype.flush = function () {
  * Sends a message.
  *
  * @param {String} message.
+ * @param {Function} callback function.
  * @return {Socket} for chaining.
  * @api public
  */
 
 Socket.prototype.write =
-Socket.prototype.send = function (msg) {
-  this.sendPacket('message', msg);
+Socket.prototype.send = function (msg, fn) {
+  this.sendPacket('message', msg, fn);
   return this;
 };
 
@@ -1137,13 +1215,15 @@ Socket.prototype.send = function (msg) {
  *
  * @param {String} packet type.
  * @param {String} data.
+ * @param {Function} callback function.
  * @api private
  */
 
-Socket.prototype.sendPacket = function (type, data) {
+Socket.prototype.sendPacket = function (type, data, fn) {
   var packet = { type: type, data: data };
   this.emit('packetCreate', packet);
   this.writeBuffer.push(packet);
+  this.callbackBuffer.push(fn);
   this.flush();
 };
 
@@ -1185,8 +1265,15 @@ Socket.prototype.onError = function (err) {
 Socket.prototype.onClose = function (reason, desc) {
   if ('opening' == this.readyState || 'open' == this.readyState) {
     debug('socket close with reason: "%s"', reason);
+    var self = this;
     clearTimeout(this.pingIntervalTimer);
     clearTimeout(this.pingTimeoutTimer);
+    // clean buffers in next tick, so developers can still
+    // grab the buffers on `close` event
+    setTimeout(function() {
+      self.writeBuffer = [];
+      self.callbackBuffer = [];
+    }, 0);
     this.readyState = 'closed';
     this.emit('close', reason, desc);
     this.onclose && this.onclose.call(this);
@@ -1196,7 +1283,7 @@ Socket.prototype.onClose = function (reason, desc) {
 
 /**
  * Filters upgrades, returning only those matching client transports.
- * 
+ *
  * @param {Array} server upgrades
  * @api private
  *
@@ -1209,6 +1296,7 @@ Socket.prototype.filterUpgrades = function (upgrades) {
   }
   return filteredUpgrades;
 };
+
 });
 require.register("LearnBoost-engine.io-client/lib/transport.js", function(exports, require, module){
 
@@ -1360,13 +1448,7 @@ require.register("LearnBoost-engine.io-client/lib/emitter.js", function(exports,
  * Module dependencies.
  */
 
-var Emitter;
-
-try {
-  Emitter = require('emitter');
-} catch(e){
-  Emitter = require('emitter-component');
-}
+var Emitter = require('emitter');
 
 /**
  * Module exports.
@@ -1397,16 +1479,6 @@ Emitter.prototype.removeEventListener = Emitter.prototype.off;
  */
 
 Emitter.prototype.removeListener = Emitter.prototype.off;
-
-/**
- * Node-compatible `EventEmitter#removeAllListeners`
- *
- * @api public
- */
-
-Emitter.prototype.removeAllListeners = function(){
-  this._callbacks = {};
-};
 
 });
 require.register("LearnBoost-engine.io-client/lib/util.js", function(exports, require, module){
@@ -1520,12 +1592,12 @@ exports.defer = function (fn) {
  * @api private
  */
 
-var rvalidchars = /^[\],:{}\s]*$/
-  , rvalidescape = /\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g
-  , rvalidtokens = /"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g
-  , rvalidbraces = /(?:^|:|,)(?:\s*\[)+/g
-  , rtrimLeft = /^\s+/
-  , rtrimRight = /\s+$/
+var rvalidchars = /^[\],:{}\s]*$/;
+var rvalidescape = /\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g;
+var rvalidtokens = /"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g;
+var rvalidbraces = /(?:^|:|,)(?:\s*\[)+/g;
+var rtrimLeft = /^\s+/;
+var rtrimRight = /\s+$/;
 
 exports.parseJSON = function (data) {
   var global = exports.global();
@@ -1563,8 +1635,9 @@ exports.ua = {};
  */
 
 exports.ua.hasCORS = 'undefined' != typeof XMLHttpRequest && (function () {
+  var a;
   try {
-    var a = new XMLHttpRequest();
+    a = new XMLHttpRequest();
   } catch (e) {
     return false;
   }
@@ -1613,10 +1686,10 @@ exports.ua.ios6 = exports.ua.ios && /OS 6_/.test(navigator.userAgent);
  */
 
 exports.request = function request (xdomain) {
-  if ('undefined' == typeof window) {
+  try {
     var _XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
     return new _XMLHttpRequest();
-  }
+  } catch (e) {}
 
   if (xdomain && 'undefined' != typeof XDomainRequest && !exports.ua.hasCORS) {
     return new XDomainRequest();
@@ -1675,11 +1748,28 @@ exports.qs = function (obj) {
   for (var i in obj) {
     if (obj.hasOwnProperty(i)) {
       if (str.length) str += '&';
-      str += i + '=' + encodeURIComponent(obj[i]);
+      str += encodeURIComponent(i) + '=' + encodeURIComponent(obj[i]);
     }
   }
 
   return str;
+};
+
+/**
+ * Parses a simple querystring.
+ *
+ * @param {String} qs
+ * @api private
+ */
+
+exports.qsParse = function(qs){
+  var qry = {};
+  var pairs = qs.split('&');
+  for (var i = 0, l = pairs.length; i < l; i++) {
+    var pair = pairs[i].split('=');
+    qry[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1]);
+  }
+  return qry;
 };
 
 });
@@ -1726,11 +1816,11 @@ function polling (opts) {
     var port = location.port;
 
     // some user agents have empty `location.port`
-    if (Number(port) != port) {
+    if (Number(port) !== port) {
       port = isSSL ? 443 : 80;
     }
 
-    xd = opts.host != location.hostname || port != opts.port;
+    xd = opts.hostname != location.hostname || port != opts.port;
     isXProtocol = opts.secure != isSSL;
   }
 
@@ -1868,34 +1958,37 @@ Polling.prototype.poll = function(){
  */
 
 Polling.prototype.onData = function(data){
+  var self = this;
   debug('polling got data %s', data);
-  // decode payload
-  var packets = parser.decodePayload(data);
 
-  for (var i = 0, l = packets.length; i < l; i++) {
-    // if its the first message we consider the trnasport open
-    if ('opening' == this.readyState) {
-      this.onOpen();
+  // decode payload
+  parser.decodePayload(data, function(packet, index, total) {
+    // if its the first message we consider the transport open
+    if ('opening' == self.readyState) {
+      self.onOpen();
     }
 
     // if its a close packet, we close the ongoing requests
-    if ('close' == packets[i].type) {
-      this.onClose();
-      return;
+    if ('close' == packet.type) {
+      self.onClose();
+      return false;
     }
 
     // otherwise bypass onData and handle the message
-    this.onPacket(packets[i]);
-  }
+    self.onPacket(packet);
+  });
 
-  // if we got data we're not polling
-  this.polling = false;
-  this.emit('pollComplete');
+  // if an event did not trigger closing
+  if ('closed' != this.readyState) {
+    // if we got data we're not polling
+    this.polling = false;
+    this.emit('pollComplete');
 
-  if ('open' == this.readyState) {
-    this.poll();
-  } else {
-    debug('ignoring poll - transport state "%s"', this.readyState);
+    if ('open' == this.readyState) {
+      this.poll();
+    } else {
+      debug('ignoring poll - transport state "%s"', this.readyState);
+    }
   }
 };
 
@@ -2008,8 +2101,16 @@ function XHR(opts){
   Polling.call(this, opts);
 
   if (global.location) {
-    this.xd = opts.host != global.location.hostname ||
-      global.location.port != opts.port;
+    var isSSL = 'https:' == location.protocol;
+    var port = location.port;
+
+    // some user agents have empty `location.port`
+    if (Number(port) !== port) {
+      port = isSSL ? 443 : 80;
+    }
+
+    this.xd = opts.hostname != global.location.hostname ||
+      port != opts.port;
   }
 };
 
@@ -2212,6 +2313,9 @@ Request.prototype.onError = function(err){
  */
 
 Request.prototype.cleanup = function(){
+  if ('undefined' == typeof this.xhr ) {
+    return;
+  }
   // xmlhttprequest
   this.xhr.onreadystatechange = empty;
 
@@ -2489,7 +2593,6 @@ JSONPPolling.prototype.doWrite = function (data, fn) {
 
 });
 require.register("LearnBoost-engine.io-client/lib/transports/websocket.js", function(exports, require, module){
-
 /**
  * Module dependencies.
  */
@@ -2573,10 +2676,43 @@ WS.prototype.doOpen = function(){
  */
 
 WS.prototype.write = function(packets){
+  var self = this;
+  this.writable = false;
+  // encodePacket efficient as it uses WS framing
+  // no need for encodePayload
   for (var i = 0, l = packets.length; i < l; i++) {
     this.socket.send(parser.encodePacket(packets[i]));
   }
+  function ondrain() {
+    self.writable = true;
+    self.emit('drain');
+  }
+  // check periodically if we're done sending
+  if ('bufferedAmount' in this.socket) {
+    this.bufferedAmountId = setInterval(function() {
+      if (self.socket.bufferedAmount == 0) {
+        clearInterval(self.bufferedAmountId);
+        ondrain();
+      }
+    }, 50);
+  } else {
+    // fake drain
+    // defer to next tick to allow Socket to clear writeBuffer
+    setTimeout(ondrain, 0);
+  }
 };
+
+/**
+ * Called upon close
+ *
+ * @api private
+ */
+
+WS.prototype.onClose = function(){
+  // stop checking to see if websocket is done sending buffer
+  clearInterval(this.bufferedAmountId);
+  Transport.prototype.onClose.call(this);
+}
 
 /**
  * Closes socket.
@@ -3274,7 +3410,7 @@ require.register("wearefractal-protosock/dist/Client.js", function(exports, requ
 
 });
 require.register("vein/dist/main.js", function(exports, require, module){
-// Generated by CoffeeScript 1.4.0
+// Generated by CoffeeScript 1.6.2
 (function() {
   var ProtoSock, client, server;
 
@@ -3286,7 +3422,7 @@ require.register("vein/dist/main.js", function(exports, require, module){
     createClient: ProtoSock.createClientWrapper(client)
   };
 
-  if (!(typeof window !== "undefined" && window !== null)) {
+  if (typeof window === "undefined" || window === null) {
     server = require('./Server');
     module.exports.createServer = ProtoSock.createServerWrapper(server);
   }
@@ -3295,7 +3431,7 @@ require.register("vein/dist/main.js", function(exports, require, module){
 
 });
 require.register("vein/dist/Client.js", function(exports, require, module){
-// Generated by CoffeeScript 1.4.0
+// Generated by CoffeeScript 1.6.2
 (function() {
   var ClientNamespace, client, getId,
     _this = this,
@@ -3303,6 +3439,7 @@ require.register("vein/dist/Client.js", function(exports, require, module){
 
   getId = function() {
     var rand;
+
     rand = function() {
       return (((1 + Math.random()) * 0x10000000) | 0).toString(16);
     };
@@ -3310,7 +3447,6 @@ require.register("vein/dist/Client.js", function(exports, require, module){
   };
 
   ClientNamespace = (function() {
-
     function ClientNamespace(_socket, _name) {
       this._socket = _socket;
       this._name = _name;
@@ -3320,6 +3456,7 @@ require.register("vein/dist/Client.js", function(exports, require, module){
 
     ClientNamespace.prototype.add = function(svcs) {
       var service, _i, _len;
+
       for (_i = 0, _len = svcs.length; _i < _len; _i++) {
         service = svcs[_i];
         this._services = svcs;
@@ -3330,8 +3467,10 @@ require.register("vein/dist/Client.js", function(exports, require, module){
 
     ClientNamespace.prototype._getSender = function(service) {
       var _this = this;
+
       return function() {
         var args, cb, id, _i;
+
         args = 2 <= arguments.length ? __slice.call(arguments, 0, _i = arguments.length - 1) : (_i = 0, []), cb = arguments[_i++];
         id = getId();
         if (typeof cb === 'function') {
@@ -3410,6 +3549,7 @@ require.register("vein/dist/Client.js", function(exports, require, module){
     },
     message: function(socket, msg) {
       var k, v, _i, _len, _ref, _ref1, _ref2;
+
       if (msg.type === 'response') {
         (_ref = this.ns(msg.ns)._callbacks)[msg.id].apply(_ref, msg.args);
         return delete this.ns(msg.ns)._callbacks[msg.id];
@@ -3441,7 +3581,7 @@ require.register("vein/dist/Client.js", function(exports, require, module){
 
 });
 require.register("vein/dist/Namespace.js", function(exports, require, module){
-// Generated by CoffeeScript 1.4.0
+// Generated by CoffeeScript 1.6.2
 (function() {
   var Namespace, async, basename, extname, join, readdirSync, _ref;
 
@@ -3452,7 +3592,6 @@ require.register("vein/dist/Namespace.js", function(exports, require, module){
   async = require('async');
 
   Namespace = (function() {
-
     function Namespace(_name) {
       this._name = _name;
       this._services = {};
@@ -3471,6 +3610,7 @@ require.register("vein/dist/Namespace.js", function(exports, require, module){
 
     Namespace.prototype.addFolder = function(folder) {
       var ext, file, service, serviceName, _i, _len, _ref1;
+
       _ref1 = readdirSync(folder);
       for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
         file = _ref1[_i];
@@ -3492,6 +3632,7 @@ require.register("vein/dist/Namespace.js", function(exports, require, module){
     Namespace.prototype._middle = function(msg, res, cb) {
       var run,
         _this = this;
+
       if (this._stack.length === 0) {
         return cb();
       }
@@ -3517,6 +3658,7 @@ require.alias("wearefractal-protosock/dist/defaultClient.js", "vein/deps/protoso
 require.alias("wearefractal-protosock/dist/Client.js", "vein/deps/protosock/dist/Client.js");
 require.alias("wearefractal-protosock/dist/main.js", "vein/deps/protosock/index.js");
 require.alias("component-emitter/index.js", "wearefractal-protosock/deps/emitter/index.js");
+require.alias("component-indexof/index.js", "component-emitter/deps/indexof/index.js");
 
 require.alias("LearnBoost-engine.io-client/lib/index.js", "wearefractal-protosock/deps/engine.io/lib/index.js");
 require.alias("LearnBoost-engine.io-client/lib/socket.js", "wearefractal-protosock/deps/engine.io/lib/socket.js");
@@ -3531,6 +3673,7 @@ require.alias("LearnBoost-engine.io-client/lib/transports/websocket.js", "wearef
 require.alias("LearnBoost-engine.io-client/lib/transports/flashsocket.js", "wearefractal-protosock/deps/engine.io/lib/transports/flashsocket.js");
 require.alias("LearnBoost-engine.io-client/lib/index.js", "wearefractal-protosock/deps/engine.io/index.js");
 require.alias("component-emitter/index.js", "LearnBoost-engine.io-client/deps/emitter/index.js");
+require.alias("component-indexof/index.js", "component-emitter/deps/indexof/index.js");
 
 require.alias("LearnBoost-engine.io-protocol/lib/index.js", "LearnBoost-engine.io-client/deps/engine.io-parser/lib/index.js");
 require.alias("LearnBoost-engine.io-protocol/lib/keys.js", "LearnBoost-engine.io-client/deps/engine.io-parser/lib/keys.js");
@@ -3549,7 +3692,7 @@ require.alias("vein/dist/main.js", "vein/index.js");
 if (typeof exports == "object") {
   module.exports = require("vein");
 } else if (typeof define == "function" && define.amd) {
-  define(require("vein"));
+  define(function(){ return require("vein"); });
 } else {
   window["Vein"] = require("vein");
 }})();
