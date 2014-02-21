@@ -1,33 +1,32 @@
 {
-   "name":"vein",
-   "description":"WebSocket RPC",
-   "version":"0.5.4",
-   "homepage":"http://github.com/wearefractal/vein",
-   "repository":"git://github.com/wearefractal/vein.git",
-   "author":"Fractal <contact@wearefractal.com> (http://wearefractal.com/)",
-   "main":"./index.js",
-
-   "dependencies":{
-      "coffee-script":"*",
-      "async":"*",
-      "protosock":"*"
-   },
-   "devDependencies":{
-      "mocha":"*",
-      "should":"*",
-      "connect":"*",
-      "uglify-js":"*"
-   },
-   "scripts":{
-      "test":"mocha --compilers coffee:coffee-script --reporter spec"
-   },
-   "engines":{
-      "node":">= 0.6.0"
-   },
-   "licenses":[
-      {
-         "type":"MIT",
-         "url":"http://github.com/wearefractal/vein/raw/master/LICENSE"
-      }
-   ]
+  "name": "vein",
+  "description": "WebSocket RPC",
+  "version": "0.5.4",
+  "homepage": "http://github.com/wearefractal/vein",
+  "repository": "git://github.com/wearefractal/vein.git",
+  "author": "Fractal <contact@wearefractal.com> (http://wearefractal.com/)",
+  "main": "./index.js",
+  "dependencies": {
+    "coffee-script": "~1.7.0",
+    "async": "~0.2.10",
+    "protosock": "~0.2.4"
+  },
+  "devDependencies": {
+    "mocha": "*",
+    "should": "*",
+    "connect": "*",
+    "uglify-js": "*"
+  },
+  "scripts": {
+    "test": "mocha --compilers coffee:coffee-script/register --reporter spec"
+  },
+  "engines": {
+    "node": ">= 0.6.0"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "http://github.com/wearefractal/vein/raw/master/LICENSE"
+    }
+  ]
 }
